@@ -97,7 +97,7 @@ jobs:
 
       - name: Git kernel
         run: |
-          git clone "${{ github.event.inputs.KERNEL_SOURCE }}" -b "${{ github.event.inputs.KERNEL_SOURCE_BRANCH }}" kernel
+          git clone --depth=1 "${{ github.event.inputs.KERNEL_SOURCE }}" -b "${{ github.event.inputs.KERNEL_SOURCE_BRANCH }}" kernel
           echo "TAG_NAME=$(date -u +%d%m%Y%I%M)" >> $GITHUB_ENV
 
       - name: Setup KernelSU
