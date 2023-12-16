@@ -1,4 +1,4 @@
-name: Pixel OS Inline
+name: KernelSU for QRD8350
 
 
 on:
@@ -13,12 +13,12 @@ on:
         KERNEL_SOURCE:
           description: 'Kernel Source'
           required: true
-          default: "https://github.com/bheatleyyy/kernel_oplus_sm8350.git"
+          default: "https://github.com/QRD-Development/android_kernel_qcom_sm8350"
           type: string
         KERNEL_SOURCE_BRANCH:
           description: 'kernel Branch'
           required: true
-          default: "thirteen"
+          default: "uvite"
           type: string
         KERNEL_DEFCONFIG:
           description: 'Kernel Config'
@@ -28,18 +28,18 @@ on:
         ANYKERNEL3_SOURCE:
           description: 'Anykernel3 Source'
           required: true
-          default: "https://github.com/natsumerinchan/AnyKernel3-op9rt.git"
+          default: "https://github.com/snnbyyds/AnyKernel3-lahaina.git"
           type: string
         ANYKERNEL3_SOURCE_BRANCH:
           description: 'Anykernel3 Branch'
           required: true
-          default: "martini"
+          default: "lahaina"
           type: string
         KERNELSU_CONFIG:
           description: 'Compile KernelSU'
           required: true
           default: true
-          type: boolean          
+          type: boolean
         CCACHE_CONFIG:
           description: 'Use Ccache'
           required: true
@@ -48,7 +48,7 @@ on:
         KERNELSU_TAG:
           description: 'Choose KernelSU branch or tag'
           required: false
-          default: main
+          default: "main"
           type: string
 
 jobs:
@@ -62,6 +62,7 @@ jobs:
       CCACHE_MAXSIZE: "2G"
       CCACHE_HARDLINK: "true"
 
+      
     steps:
 
       - uses: actions/checkout@v3
@@ -70,7 +71,7 @@ jobs:
         if: github.event.inputs.CCACHE_CONFIG == 'true'
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: PixelOS-inline
+          key: Pixel-Experience
 
       - name: Setup Environment
         run: |
@@ -144,25 +145,37 @@ jobs:
           if test -e ./Image; then
              zip -r Kernel.zip *
              test -e ./tools/zipsigner.jar || wget -O ./tools/zipsigner.jar https://forum.xda-developers.com/attachments/zipsigner-3-0-jar.4586999/
-             java -jar ./tools/zipsigner.jar ./Kernel.zip ./PixelOS-Inline-martini-${{ env.TAG_NAME }}.zip
+             java -jar ./tools/zipsigner.jar ./Kernel.zip ./lahaina-ksu-${{ env.TAG_NAME }}.zip
           fi
+
+      - name: Repack vendor_dlkm.img
+        run: |
+          cd $GITHUB_WORKSPACE/kernel
+          export KERNEL_PATH=$PWD
+          git clone -b main https://github.com/natsumerinchan/vendor_dlkm_repacker.git repacker
+          mv $GITHUB_WORKSPACE/dlkm $GITHUB_WORKSPACE/kernel/repacker/vendor_dlkm
+          find $GITHUB_WORKSPACE/kernel/out/ -name "*.ko" -exec cp \{\} $GITHUB_WORKSPACE/kernel/repacker/vendor_dlkm/lib/modules/ \;
+          cd $GITHUB_WORKSPACE/kernel/repacker
+          mv $GITHUB_WORKSPACE/kernel/repacker/vendor_dlkm/lib/modules/wlan.ko $GITHUB_WORKSPACE/kernel/repacker/vendor_dlkm/lib/modules/qca_cld3_wlan.ko
+          sudo bash ./repack_dlkm.sh vendor_dlkm
+          mv vendor_dlkm-ext4.img vendor_dlkm.img
 
       - name: Upload Artifact
         if: github.event.inputs.RELEASE_CONFIG == 'false'
         uses: actions/upload-artifact@v3
         with:
-          name: PixelOS-Inline-martini-${{ env.TAG_NAME }}
+          name: lahaina-ksu-${{ env.TAG_NAME }}
           path: |
-            kernel/AnyKernel3/PixelOS-Inline-martini-${{ env.TAG_NAME }}.zip
+            kernel/AnyKernel3/lahaina-ksu-${{ env.TAG_NAME }}.zip
             kernel/repacker/vendor_dlkm.img
 
       - name: Upload to Release
         if: github.event.inputs.RELEASE_CONFIG == 'true'
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "kernel/AnyKernel3/PixelOS-Inline-martini-${{ env.TAG_NAME }}.zip,kernel/repacker/vendor_dlkm.img"
-          tag: "PixelOS-Inline-martini-${{ env.TAG_NAME }}"
-          name: "PixelOS-Inline-martini-${{ env.TAG_NAME }}"
+          artifacts: "kernel/AnyKernel3/lahaina-ksu-${{ env.TAG_NAME }}.zip,kernel/repacker/vendor_dlkm.img"
+          tag: "lahaina-ksu-${{ env.TAG_NAME }}"
+          name: "lahaina-ksu-${{ env.TAG_NAME }}"
           allowUpdates: true
           replacesArtifacts: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}     
